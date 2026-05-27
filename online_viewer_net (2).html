@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meine persönliche Dashboard-App</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --sidebar-bg: #2c3e50;
+            --sidebar-hover: #34495e;
+            --bg-color: #f5f7fa;
+            --card-color: #ffffff;
+            --text-color: #333333;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* --- SIDEBAR STYLE --- */
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            padding-top: 20px;
+            z-index: 100;
+        }
+
+        .sidebar-brand {
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-align: center;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .sidebar-item:hover {
+            background-color: var(--sidebar-hover);
+        }
+
+        .sidebar-item.active {
+            background-color: var(--primary-color);
+        }
+
+        /* --- MAIN CONTENT STYLE --- */
+        .main-content {
+            margin-left: 260px;
+            flex-grow: 1;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .content-container {
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .app-section {
+            display: none;
+        }
+
+        .app-section.active {
+            display: block;
+        }
+
+        h1, h2 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+
+        /* --- DIARY & CHART CARD STYLE --- */
+        .diary-form, .chart-card {
+            background-color: var(--card-color);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .chart-card h3 {
+            margin-top: 0;
+            color: #34495e;
+            border-bottom: 2px solid #f5f7fa;
+            padding-bottom: 8px;
+        }
+
+        .demo-badge {
+            background-color: #f39c12;
+            color: white;
+            font-size: 0.8rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        input, select, textarea {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        textarea {
+            resize: vertical;
+            height: 100px;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: #357abd;
+        }
+
+        .entries-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .entry-card {
+            background-color: var(--card-color);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-left: 5px solid var(--primary-color);
+        }
+
+        .entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+        }
+
+        .entry-date {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .entry-meta {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            font-size: 0.9rem;
+            background: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .entry-text {
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .delete-btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            border-radius: 4px;
+            cursor: pointer;
+            width: auto;
+            margin-top: 10px;
+        }
+
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .no-entries, .placeholder-text {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+
+        /* --- RESPONSIVE STYLE --- */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                position: relative;
+                bottom: auto;
+                padding-top: 10px;
+            }
+            .sidebar-brand {
+                margin-bottom: 5px;
+                padding: 5px;
+            }
+            .sidebar-menu {
+                display: flex;
+                justify-content: space-around;
+            }
+            .sidebar-item {
+                padding: 10px;
+                font-size: 0.9rem;
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="sidebar">
+    <div class="sidebar-brand">🚀 Mein Workspace</div>
+    <ul class="sidebar-menu">
+        <li class="sidebar-item active" data-target="diary-section">📝 Tagebuch</li>
+        <li class="sidebar-item" data-target="stats-section">📊 Monatlicher Verlauf</li>
+        <li class="sidebar-item" data-target="settings-section">⚙️ Einstellungen</li>
+    </ul>
+</nav>
+
+<main class="main-content">
+    <div class="content-container">
+
+        <section id="diary-section" class="app-section active">
+            <h1>📝 Trackingbook</h1>
+            <div class="diary-form">
+                <form id="diaryForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="entryDate">Datum</label>
+                            <input type="date" id="entryDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="wakeTime">Aufwachzeit</label>
+                            <input type="time" id="wakeTime">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="weight">Gewicht (kg)</label>
+                            <input type="number" id="weight" step="0.1" placeholder="z.B. 75.5">
+                        </div>
+                        <div class="form-group">
+                            <label for="mood">Stimmung</label>
+                            <select id="mood">
+                                <option value="😊 Super">😊 Super</option>
+                                <option value="🙂 Gut" selected>🙂 Gut</option>
+                                <option value="😐 Geht so">😐 Geht so</option>
+                                <option value="😢 Schlecht">😢 Schlecht</option>
+                                <option value="😴 Müde">😴 Müde</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="diaryText">Gedanken / Notizen zum Tag</label>
+                        <textarea id="diaryText" placeholder="Wie war dein Tag? Was beschäftigt dich heute?"></textarea>
+                    </div>
+                    <button type="submit">Eintrag</button>
+                </form>
+            </div>
+
+            <h2>Vergangene Tage</h2>
+            <div id="entriesList" class="entries-list"></div>
+        </section>
+
+        <section id="stats-section" class="app-section">
+            <h1>📊 Monatlicher Verlauf</h1>
+            <p id="statsDescription" style="color: #666; margin-bottom: 20px;">Hier siehst du deine Gewichtsentwicklung, aufgeteilt nach Monaten.</p>
+            
+            <div id="chartsContainer"></div>
+        </section>
+
+        <section id="settings-section" class="app-section">
+            <h1>⚙️ Einstellungen</h1>
+            <p class="placeholder-text">Hier können später Optionen wie Darkmode oder Daten-Export stehen.</p>
+        </section>
+
+    </div>
+</main>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- NAVIGATION LOGIK ---
+        const menuItems = document.querySelectorAll('.sidebar-item');
+        const sections = document.querySelectorAll('.app-section');
+
+        menuItems.forEach(item => {
+            item.addEventListener('click', () => {
+                menuItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+
+                const targetSectionId = item.getAttribute('data-target');
+                sections.forEach(section => {
+                    if (section.id === targetSectionId) {
+                        section.classList.add('active');
+                    } else {
+                        section.classList.remove('active');
+                    }
+                });
+
+                if(targetSectionId === 'stats-section') {
+                    updateCharts();
+                }
+            });
+        });
+
+        // --- TAGEBUCH LOGIK ---
+        const diaryForm = document.getElementById('diaryForm');
+        const entriesList = document.getElementById('entriesList');
+        const entryDateInput = document.getElementById('entryDate');
+
+        const today = new Date().toISOString().split('T')[0];
+        entryDateInput.value = today;
+
+        function displayEntries() {
+            entriesList.innerHTML = '';
+            const entries = JSON.parse(localStorage.getItem('diaryEntries')) || [];
+
+            if (entries.length === 0) {
+                entriesList.innerHTML = '<p class="no-entries">Noch keine Tagebucheinträge vorhanden.</p>';
+                return;
+            }
+
+            const sortedEntries = [...entries].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            sortedEntries.forEach((entry) => {
+                const formattedDate = new Date(entry.date).toLocaleDateString('de-DE', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+
+                const card = document.createElement('div');
+                card.className = 'entry-card';
+
+                card.innerHTML = `
+                    <div class="entry-header">
+                        <span class="entry-date">${formattedDate}</span>
+                    </div>
+                    <div class="entry-meta">
+                        ${entry.wakeTime ? `<div class="meta-item">⏰ <b>Aufgewacht:</b> ${entry.wakeTime} Uhr</div>` : ''}
+                        ${entry.weight ? `<div class="meta-item">⚖️ <b>Gewicht:</b> ${entry.weight} kg</div>` : ''}
+                        <div class="meta-item">🧠 <b>Stimmung:</b> ${entry.mood}</div>
+                    </div>
+                    <div class="entry-text">${entry.text ? entry.text : '<i>Keine zusätzlichen Notizen.</i>'}</div>
+                    <button class="delete-btn" data-id="${entry.id || entry.date + entry.wakeTime}">Eintrag löschen</button>
+                `;
+
+                entriesList.appendChild(card);
+            });
+
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    deleteEntryById(id);
+                });
+            });
+        }
+
+        function ensureIds(entries) {
+            return entries.map(e => {
+                if(!e.id) e.id = '_' + Math.random().toString(36).substr(2, 9);
+                return e;
+            });
+        }
+
+        diaryForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const newEntry = {
+                id: '_' + Math.random().toString(36).substr(2, 9),
+                date: document.getElementById('entryDate').value,
+                wakeTime: document.getElementById('wakeTime').value,
+                weight: document.getElementById('weight').value ? parseFloat(document.getElementById('weight').value) : null,
+                mood: document.getElementById('mood').value,
+                text: document.getElementById('diaryText').value
+            };
+
+            let entries = JSON.parse(localStorage.getItem('diaryEntries')) || [];
+            entries = ensureIds(entries);
+            entries.push(newEntry);
+            localStorage.setItem('diaryEntries', JSON.stringify(entries));
+
+            diaryForm.reset();
+            entryDateInput.value = today;
+            displayEntries();
+        });
+
+        function deleteEntryById(id) {
+            let entries = JSON.parse(localStorage.getItem('diaryEntries')) || [];
+            entries = ensureIds(entries);
+            
+            if (confirm('Möchtest du diesen Eintrag wirklich löschen?')) {
+                const filtered = entries.filter(e => e.id !== id);
+                localStorage.setItem('diaryEntries', JSON.stringify(filtered));
+                displayEntries();
+                updateCharts();
+            }
+        }
+
+        // --- DIAGRAMME GENERIEREN (MIT DEMO-MODUS) ---
+        let activeCharts = [];
+
+        function updateCharts() {
+            const chartsContainer = document.getElementById('chartsContainer');
+            const statsDescription = document.getElementById('statsDescription');
+            
+            activeCharts.forEach(chart => chart.destroy());
+            activeCharts = [];
+            chartsContainer.innerHTML = '';
+
+            let entries = JSON.parse(localStorage.getItem('diaryEntries')) || [];
+            const weightEntries = entries.filter(e => e.weight !== null && e.weight !== undefined && e.weight !== '');
+
+            // WENN KEINE DATEN VORHANDEN SIND -> DEMO DIAGRAMM ZEICHNEN
+            if (weightEntries.length === 0) {
+                statsDescription.innerText = "Hier siehst du ein Beispiel-Diagramm. Trage einfach ein Gewicht in dein Tagebuch ein, um es durch deine echten Daten zu ersetzen.";
+                
+                const currentMonthName = new Date().toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+                
+                const card = document.createElement('div');
+                card.className = 'chart-card';
+                card.innerHTML = `
+                    <h3>${currentMonthName} <span class="demo-badge">Vorschau-Modus</span></h3>
+                    <div style="position: relative; height:250px; width:100%">
+                        <canvas id="demoChart"></canvas>
+                    </div>
+                `;
+                chartsContainer.appendChild(card);
+
+                // Künstliche Demo-Daten für die Kurve
+                const ctx = document.getElementById('demoChart').getContext('2d');
+                const demoChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['01.', '05.', '10.', '15.', '20.', '25.', '30.'],
+                        datasets: [{
+                            label: 'Beispiel-Verlauf (kg)',
+                            data: [78.5, 78.1, 77.9, 78.3, 77.5, 77.2, 76.8],
+                            borderColor: '#bdc3c7',
+                            backgroundColor: 'rgba(189, 195, 199, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.3,
+                            pointBackgroundColor: '#95a5a6',
+                            pointRadius: 4,
+                            borderDash: [5, 5], // Gestrichelte Linie signalisiert "Vorschau"
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: false }
+                        }
+                    }
+                });
+                activeCharts.push(demoChart);
+                return;
+            }
+
+            // WENN ECHTE DATEN DA SIND -> NORMALER MODUS
+            statsDescription.innerText = "Hier siehst du deine persönliche Gewichtsentwicklung, automatisch nach Monaten aufgeteilt.";
+            weightEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            const groupedByMonth = {};
+            weightEntries.forEach(entry => {
+                const dateObj = new Date(entry.date);
+                const monthKey = dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0');
+                
+                if (!groupedByMonth[monthKey]) {
+                    groupedByMonth[monthKey] = [];
+                }
+                groupedByMonth[monthKey].push(entry);
+            });
+
+            const sortedMonths = Object.keys(groupedByMonth).sort((a,b) => b.localeCompare(a));
+
+            sortedMonths.forEach(monthKey => {
+                const monthEntries = groupedByMonth[monthKey];
+                const firstEntryDate = new Date(monthEntries[0].date);
+                const monthName = firstEntryDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+
+                const card = document.createElement('div');
+                card.className = 'chart-card';
+                card.innerHTML = `
+                    <h3>${monthName}</h3>
+                    <div style="position: relative; height:250px; width:100%">
+                        <canvas id="chart-${monthKey}"></canvas>
+                    </div>
+                `;
+                chartsContainer.appendChild(card);
+
+                const labels = monthEntries.map(e => {
+                    return new Date(e.date).toLocaleDateString('de-DE', { day: '2-digit' }) + '.';
+                });
+                const weights = monthEntries.map(e => e.weight);
+
+                const ctx = document.getElementById(`chart-${monthKey}`).getContext('2d');
+                const newChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Gewicht (kg)',
+                            data: weights,
+                            borderColor: '#4a90e2',
+                            backgroundColor: 'rgba(74, 144, 226, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.2,
+                            pointBackgroundColor: '#4a90e2',
+                            pointRadius: 4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                title: { display: true, text: 'kg' }
+                            },
+                            x: {
+                                title: { display: true, text: 'Tag des Monats' }
+                            }
+                        }
+                    }
+                });
+                activeCharts.push(newChart);
+            });
+        }
+
+        // Initiales Laden
+        displayEntries();
+    });
+</script>
+
+</body>
+</html>
